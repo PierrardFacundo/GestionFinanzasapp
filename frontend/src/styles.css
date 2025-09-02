@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 1rem;
+}
+
+@layer base {
+  * {
+    @apply border-neutral-200 dark:border-neutral-800;
+  }
+  body {
+    @apply bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border bg-white dark:bg-neutral-900 shadow-soft;
+  }
+  .card-header {
+    @apply px-5 py-4 border-b;
+  }
+  .card-title {
+    @apply text-base font-semibold;
+  }
+  .card-content {
+    @apply p-5;
+  }
+}
