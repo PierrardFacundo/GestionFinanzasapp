@@ -28,4 +28,15 @@
   .card-content {
     @apply p-5;
   }
+  /* Suaviza la transición cuando se cambia el tema */
+.theme-transition,
+.theme-transition * {
+  transition:
+    background-color 300ms ease,
+    color 300ms ease,
+    border-color 300ms ease,
+    fill 300ms ease,
+    stroke 300ms ease !important;
+  }
+
 }
