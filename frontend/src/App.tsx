@@ -15,11 +15,14 @@ export default function App() {
   const isWelcome = pathname === "/welcome";
 
   return (
-    <div className="min-h-screen">
+    // Contenedor ÚNICO que scrollea (con scrollbar oculto)
+    <div id="app-scroll" className="fixed inset-0 overflow-y-auto bg-slate-950 no-scrollbar">
       {!isWelcome && <Topbar />}
-      <div className={!isWelcome ? "mx-auto grid max-w-screen-2xl grid-cols-1 md:grid-cols-[260px_1fr]" : ""}>
+
+      <div className={isWelcome ? "" : "mx-auto grid max-w-screen-2xl grid-cols-1 md:grid-cols-[260px_1fr]"}>
         {!isWelcome && <Sidebar />}
-        <main className={!isWelcome ? "px-4 py-6 md:px-6" : ""}>
+
+        <main className={isWelcome ? "" : "px-4 py-6 md:px-6 pb-24"}>
           <Routes>
             {/* Pantalla de bienvenida */}
             <Route path="/welcome" element={<Welcome />} />
@@ -41,4 +44,5 @@ export default function App() {
     </div>
   );
 }
+
 

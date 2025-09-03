@@ -38,5 +38,33 @@
     fill 300ms ease,
     stroke 300ms ease !important;
   }
+  /* Alturas base para que el contenedor de la app use toda la ventana */
+html, body, #root { height: 100%; }
+
+/* El body no scrollea (evita la 2ª barra) */
+body { overflow: hidden; }
+
+/* Utilidad: permite scroll pero oculta la barra (Chrome/Edge/Firefox) */
+.no-scrollbar::-webkit-scrollbar { width: 0; height: 0; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Alturas base */
+html, body, #root { height: 100%; }
+
+/* El body NO scrollea (evita doble scroll) */
+body { overflow: hidden; }
+
+/* Contenedor principal con scroll propio */
+#app-scroll {
+  height: 100dvh;               /* cubre el viewport */
+  overflow-y: auto;             /* único scroll */
+  overscroll-behavior: contain; /* evita “trabas” al final */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ocultar scrollbar del contenedor principal */
+#app-scroll::-webkit-scrollbar { width: 0; height: 0; }
+#app-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+
 
 }

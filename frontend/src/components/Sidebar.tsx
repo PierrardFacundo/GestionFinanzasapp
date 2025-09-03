@@ -2,13 +2,14 @@ import { NavLink } from "react-router-dom"
 import { BarChart2, CreditCard, Home, Layers, Settings, Wallet } from "lucide-react"
 
 const links = [
-  { to: "/", label: "Dashboard", icon: Home },
+  { to: "/dashboard", label: "Dashboard", icon: Home }, // 👈 antes era "/"
   { to: "/transacciones", label: "Transacciones", icon: Layers },
   { to: "/cuentas", label: "Cuentas", icon: CreditCard },
   { to: "/presupuestos", label: "Presupuestos", icon: Wallet },
   { to: "/reportes", label: "Reportes", icon: BarChart2 },
   { to: "/ajustes", label: "Ajustes", icon: Settings }
-]
+];
+
 
 export default function Sidebar() {
   return (
