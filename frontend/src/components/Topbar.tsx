@@ -36,7 +36,7 @@ export default function Topbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-white/70 backdrop-blur dark:bg-neutral-950/70">
+    <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/40 backdrop-blur">
       <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-2xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-soft">

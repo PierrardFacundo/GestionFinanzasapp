@@ -16,7 +16,7 @@ export default function App() {
 
   return (
     // Contenedor ÚNICO que scrollea (con scrollbar oculto)
-    <div id="app-scroll" className="fixed inset-0 overflow-y-auto bg-slate-950 no-scrollbar">
+    <div id="app-scroll" className="fixed inset-0 overflow-y-auto no-scrollbar">
       {!isWelcome && <Topbar />}
 
       <div className={isWelcome ? "" : "mx-auto grid max-w-screen-2xl grid-cols-1 md:grid-cols-[260px_1fr]"}>

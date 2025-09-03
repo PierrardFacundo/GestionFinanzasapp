@@ -66,5 +66,44 @@ body { overflow: hidden; }
 #app-scroll::-webkit-scrollbar { width: 0; height: 0; }
 #app-scroll { scrollbar-width: none; -ms-overflow-style: none; }
 
+/* ===== Fondo global (mismo look que Welcome/Dashboard) ===== */
+#app-scroll {
+  position: relative;
+  /* gradiente base */
+  background:
+    radial-gradient(900px 500px at 12% 0%, rgba(16,185,129,0.12), transparent 60%),
+    radial-gradient(900px 600px at 100% 110%, rgba(6,182,212,0.12), transparent 60%),
+    linear-gradient(135deg, #020617 0%, #0b1220 50%, #0f172a 100%);
+  background-attachment: fixed; /* evita “bandas” al scrollear */
+}
+
+/* glows sutiles (como en Welcome) */
+#app-scroll::before,
+#app-scroll::after {
+  content: "";
+  position: fixed; /* se quedan pegados al viewport */
+  pointer-events: none;
+  filter: blur(32px);
+  opacity: 0.55;
+  z-index: -1;
+}
+#app-scroll::before {
+  top: -120px; left: -120px;
+  width: 380px; height: 380px;
+  background: radial-gradient(closest-side, rgba(16,185,129,0.20), transparent);
+}
+#app-scroll::after {
+  right: -140px; bottom: -140px;
+  width: 460px; height: 460px;
+  background: radial-gradient(closest-side, rgba(6,182,212,0.18), transparent);
+}
+
+/* (ya tenías) un solo scroll y barra oculta */
+html, body, #root { height: 100%; }
+body { overflow: hidden; }
+#app-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#app-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+#app-scroll::-webkit-scrollbar { width: 0; height: 0; }
+
 
 }

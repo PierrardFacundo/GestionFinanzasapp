@@ -13,7 +13,7 @@ const links = [
 
 export default function Sidebar() {
   return (
-    <aside className="hidden md:block md:w-64 border-r bg-white/60 backdrop-blur dark:bg-neutral-950/60">
+    <aside className="hidden md:flex md:flex-col border-r border-slate-800/60 bg-slate-950/40 backdrop-blur">
       <nav className="sticky top-[68px] flex h-[calc(100dvh-68px)] flex-col gap-1 p-3">
         {links.map(({ to, label, icon: Icon }) => (
           <NavLink
