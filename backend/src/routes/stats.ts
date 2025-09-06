@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { Movement } from "../models/Movement";
+import { Movement } from "../models/movement";
 
 const r = Router();
 
