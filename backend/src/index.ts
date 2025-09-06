@@ -3,6 +3,9 @@ import express from "express";
 import cors from "cors";
 import { connectMongo } from "./lib/mongo";
 
+// 👇 nuevas rutas
+import movements from "./routes/movements";
+import stats from "./routes/stats";
 
 const app = express();
 
@@ -12,10 +15,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// healthcheck
-app.get("/health", (_req, res) => {
-  res.json({ ok: true, service: "backend", env: process.env.NODE_ENV || "dev" });
-});
+// Healthcheck
+app.get("/health", (_req, res) =>
+  res.json({ ok: true, service: "backend", env: process.env.NODE_ENV || "dev" })
+);
+
+// 👇 monta API
+app.use("/api/movements", movements);
+app.use("/api/stats", stats);
 
 const PORT = Number(process.env.PORT || 4000);
 
@@ -30,3 +37,4 @@ main().catch((err) => {
   console.error("Fallo al iniciar:", err);
   process.exit(1);
 });
+
