@@ -65,7 +65,7 @@ interface Props {
 export default function DateTimelineFilter({ value, onChange, className }: Props) {
   return (
     <div className={className}>
-      <div className="relative mx-auto flex items-center gap-4 overflow-x-auto pb-2 pt-4">
+      <div className="relative mx-auto flex items-center gap-4 overflow-x-auto no-scrollbar pb-2 pt-4 max-w-full">
         {/* línea base */}
         <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-slate-700/60" />
         {PRESETS.map((p) => {

@@ -20,6 +20,13 @@ export function getExpensesMonthly(params?: { from?: string; to?: string }) {
   );
 }
 
+export function getExpensesMonthlyByCategory(params?: { from?: string; to?: string }) {
+  return get<{ data: { year: number; month: number; category: string; total: number }[] }>(
+    "/api/stats/expenses-monthly-by-category",
+    params
+  );
+}
+
 
 
 export interface CreateMovementInput {

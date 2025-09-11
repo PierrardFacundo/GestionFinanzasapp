@@ -83,6 +83,47 @@ r.get("/summary", async (_req, res, next) => {
   }
 });
 
+r.get("/expenses-monthly-by-category", async (req, res, next) => {
+  try {
+    const q = z.object({ from: z.string().optional(), to: z.string().optional() }).parse(req.query);
+
+    // Filtro base
+    const match: any = { type: "salida" };
+    if (q.from || q.to) {
+      match.date = {};
+      if (q.from) match.date.$gte = new Date(q.from);
+      if (q.to) {
+        const d = new Date(q.to);
+        d.setHours(23, 59, 59, 999);
+        match.date.$lte = d;
+      }
+    }
+
+    const rows = await Movement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: { y: { $year: "$date" }, m: { $month: "$date" }, c: "$category" },
+          total: { $sum: "$amount" },
+        },
+      },
+      { $sort: { "_id.y": 1, "_id.m": 1, "_id.c": 1 } },
+    ]);
+
+    // Respuesta plana: un item por (año, mes, categoría)
+    const data = rows.map((r) => ({
+      year: r._id.y,
+      month: r._id.m,
+      category: r._id.c,
+      total: r.total,
+    }));
+
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 /** Gastos por mes dentro de un rango (type = "salida") */
 r.get("/expenses-monthly", async (req, res, next) => {
   try {
