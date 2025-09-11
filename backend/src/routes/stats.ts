@@ -83,4 +83,63 @@ r.get("/summary", async (_req, res, next) => {
   }
 });
 
+/** Gastos por mes dentro de un rango (type = "salida") */
+r.get("/expenses-monthly", async (req, res, next) => {
+  try {
+    const q = z.object({ from: z.string().optional(), to: z.string().optional() }).parse(req.query);
+
+    // Armo el match por tipo y rango
+    const match: any = { type: "salida" };
+    if (q.from || q.to) {
+      match.date = {};
+      if (q.from) match.date.$gte = new Date(q.from);
+      if (q.to) {
+        const d = new Date(q.to);
+        d.setHours(23, 59, 59, 999);
+        match.date.$lte = d;
+      }
+    }
+
+    const rows = await Movement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: { y: { $year: "$date" }, m: { $month: "$date" } },
+          total: { $sum: "$amount" },
+        },
+      },
+      { $sort: { "_id.y": 1, "_id.m": 1 } },
+    ]);
+
+    // Normalizamos meses faltantes con 0 si vienen from/to
+    function* monthsBetween(a: Date, b: Date) {
+      const d = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1));
+      const end = new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), 1));
+      while (d <= end) {
+        yield { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 };
+        d.setUTCMonth(d.getUTCMonth() + 1);
+      }
+    }
+
+    let data: { year: number; month: number; total: number }[] = [];
+    if (q.from && q.to) {
+      const byKey = new Map<string, number>();
+      for (const r of rows) byKey.set(`${r._id.y}-${r._id.m}`, r.total);
+      const from = new Date(q.from);
+      const to = new Date(q.to);
+      for (const mm of monthsBetween(from, to)) {
+        const key = `${mm.y}-${mm.m}`;
+        data.push({ year: mm.y, month: mm.m, total: byKey.get(key) ?? 0 });
+      }
+    } else {
+      data = rows.map((r) => ({ year: r._id.y, month: r._id.m, total: r.total }));
+    }
+
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+
 export default r;

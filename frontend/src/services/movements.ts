@@ -13,6 +13,14 @@ export interface MovementFilters extends Record<string, unknown> {
   limit?: number;
 }
 
+export function getExpensesMonthly(params?: { from?: string; to?: string }) {
+  return get<{ data: { year: number; month: number; total: number }[] }>(
+    "/api/stats/expenses-monthly",
+    params
+  );
+}
+
+
 
 export interface CreateMovementInput {
   type: MovementType;

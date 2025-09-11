@@ -9,6 +9,7 @@ import {
   getSummary,
   getBalanceSeries,
   getExpensesByCategory,
+  getExpensesMonthly, // 👈 NUEVO servicio
 } from "@/services/movements";
 import type { BalanceSeries, ExpensesByCategory } from "@/types/movement";
 
@@ -31,6 +32,7 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<{ ingresos: number; gastos: number; balance: number } | null>(null);
   const [series, setSeries] = useState<BalanceSeries | null>(null);
   const [pie, setPie] = useState<ExpensesByCategory | null>(null);
+  const [monthly, setMonthly] = useState<{ year: number; month: number; total: number }[] | null>(null); // 👈 NUEVO
 
   // loading
   const [loading, setLoading] = useState(true);
@@ -43,19 +45,22 @@ export default function Dashboard() {
   async function fetchAll() {
     setLoading(true);
     try {
-      // para la torta usamos el mes del límite superior (to)
+      // para “gastos por categoría” usamos el mes del límite superior (to)
       const toDate = new Date(to);
       const year = toDate.getFullYear();
       const month = toDate.getMonth() + 1;
 
-      const [s, b, p] = await Promise.all([
+      const [s, b, p, mdata] = await Promise.all([
         getSummary(),
         getBalanceSeries({ from, to }),
         getExpensesByCategory({ year, month }),
+        getExpensesMonthly({ from, to }),                // 👈 NUEVO
       ]);
+
       setSummary(s);
       setSeries(b);
       setPie(p);
+      setMonthly(mdata.data);                             // 👈 NUEVO
     } catch (e) {
       console.error(e);
       alert("No pude cargar datos del dashboard");
@@ -154,14 +159,15 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Gráficos */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      {/* Gráficos (mitad y mitad) */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        {/* Evolución de balance */}
+        <Card>
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm text-slate-300">Evolución de balance</div>
             <div className="text-xs text-slate-400">{from} → {to}</div>
           </div>
-          <div className="h-40">
+          <div className="h-64">
             {loading ? (
               <div className="grid h-full place-content-center text-slate-400 text-sm">Cargando…</div>
             ) : series && series.series.length > 0 ? (
@@ -172,31 +178,20 @@ export default function Dashboard() {
           </div>
         </Card>
 
+        {/* Gastos por mes (columnas) */}
         <Card>
-          <div className="mb-3 text-sm text-slate-300">Gastos por categoría ({monthLabel(y, m)})</div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="flex items-center justify-center">
-              {loading ? (
-                <div className="text-slate-400 text-sm">Cargando…</div>
-              ) : pie && pie.data.length > 0 ? (
-                <DonutChart total={pie.total} data={pie.data} />
-              ) : (
-                <div className="text-slate-400 text-sm">Sin gastos</div>
-              )}
-            </div>
-            {/* leyenda */}
-            <ul className="space-y-2 text-sm">
-              {(pie?.data ?? []).map((s, i) => (
-                <li key={s.category} className="flex items-center justify-between rounded-xl border border-slate-800/70 bg-slate-950/60 px-3 py-2">
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: sliceColor(i) }} />
-                    <span className="text-slate-200">{s.category}</span>
-                  </span>
-                  <span className="text-slate-400">{Math.round(s.pct * 100)}%</span>
-                  <span className="font-medium text-white">{fmtMoney.format(s.total)}</span>
-                </li>
-              ))}
-            </ul>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-sm text-slate-300">Gastos por mes</div>
+            <div className="text-xs text-slate-400">{from} → {to}</div>
+          </div>
+          <div className="h-64">
+            {loading ? (
+              <div className="grid h-full place-content-center text-slate-400 text-sm">Cargando…</div>
+            ) : monthly && monthly.length > 0 ? (
+              <MonthlyBarsChart rows={monthly} />
+            ) : (
+              <div className="grid h-full place-content-center text-slate-400 text-sm">Sin datos</div>
+            )}
           </div>
         </Card>
       </div>
@@ -206,7 +201,7 @@ export default function Dashboard() {
 
 // ===== Charts (SVG puros, sin librerías)
 function MiniAreaChart({ data }: { data: BalanceSeries }) {
-  const width = 320, height = 140, pad = 8;
+  const width = 520, height = 220, pad = 12;
   const points = data.series;
 
   const balances = points.map(p => p.balance);
@@ -227,7 +222,7 @@ function MiniAreaChart({ data }: { data: BalanceSeries }) {
   const area = `${line} L ${width - pad},${height - pad} L ${pad},${height - pad} Z`;
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-40 w-full">
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-64 w-full">
       <defs>
         <linearGradient id="fillGradDash" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="rgba(16,185,129,0.55)" />
@@ -241,47 +236,64 @@ function MiniAreaChart({ data }: { data: BalanceSeries }) {
   );
 }
 
-function DonutChart({ total, data }: { total: number; data: ExpensesByCategory["data"] }) {
-  const r = 38;
-  const cx = 44, cy = 44;
-  const w = 16; // stroke width
-  const C = 2 * Math.PI * r;
-  let acc = 0;
+/** Columnas por mes según rango seleccionado */
+function MonthlyBarsChart({ rows }: { rows: { year: number; month: number; total: number }[] }) {
+  const width = 520, height = 220, pad = 24, bottom = 40, left = 40;
+  const innerW = width - left - pad;
+  const innerH = height - bottom - pad;
+
+  const values = rows.map(r => r.total);
+  const maxV = Math.max(1, ...values);
+  const xStep = innerW / Math.max(1, rows.length);
+  const barW = Math.max(8, xStep * 0.65);
+
+  const y = (v: number) => {
+    const t = v / maxV;
+    return pad + innerH - t * innerH;
+  };
+
+  const label = (yy: number, mm: number) =>
+    new Date(Date.UTC(yy, mm - 1, 1)).toLocaleDateString("es-AR", { month: "short" });
 
   return (
-    <svg viewBox="0 0 88 88" className="h-28 w-28">
-      {/* base */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(148,163,184,0.15)" strokeWidth={w} />
-      {data.map((s, i) => {
-        const frac = s.pct || (total ? s.total / total : 0);
-        const len = Math.max(0.001, frac * C);
-        const dash = `${len} ${C - len}`;
-        const offset = -acc * C; // arranca arriba
-        acc += frac;
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-64 w-full">
+      {/* eje X */}
+      <line
+        x1={left} y1={pad + innerH}
+        x2={left + innerW} y2={pad + innerH}
+        stroke="rgba(148,163,184,0.25)"
+      />
+
+      {/* barras */}
+      {rows.map((r, i) => {
+        const h = Math.max(1, pad + innerH - y(r.total));
+        const x = left + i * xStep + (xStep - barW) / 2;
+        const fill = "rgba(52,211,153,0.85)";
         return (
-          <circle
-            key={s.category}
-            cx={cx}
-            cy={cy}
-            r={r}
-            fill="none"
-            stroke={sliceColor(i)}
-            strokeWidth={w}
-            strokeDasharray={dash}
-            strokeDashoffset={offset}
-            transform={`rotate(-90 ${cx} ${cy})`}
-            strokeLinecap="butt"
-          />
+          <g key={`${r.year}-${r.month}`}>
+            <rect x={x} y={y(r.total)} width={barW} height={h} rx={5} ry={5} fill={fill} />
+            {/* valor encima */}
+            <text x={x + barW / 2} y={y(r.total) - 6} textAnchor="middle" className="text-[10px] fill-slate-300">
+              {new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(r.total)}
+            </text>
+          </g>
         );
       })}
-      <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" className="text-[9px] fill-white">
-        {fmtMoney.format(total)}
-      </text>
+
+      {/* labels de meses */}
+      {rows.map((r, i) => {
+        const x = left + i * xStep + xStep / 2;
+        return (
+          <text key={`lab-${r.year}-${r.month}`} x={x} y={height - 16} textAnchor="middle" className="text-[10px] fill-slate-400">
+            {label(r.year, r.month)}
+          </text>
+        );
+      })}
     </svg>
   );
 }
 
-// paleta para la torta
+// paleta (coincide con la que ya usabas)
 function sliceColor(i: number) {
   const colors = [
     "#34d399", "#22d3ee", "#60a5fa", "#c4b5fd", "#fbbf24",
