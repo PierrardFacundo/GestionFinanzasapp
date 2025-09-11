@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowUpRight, ArrowDownRight, PiggyBank, Wallet, LineChart as LineIcon } from "lucide-react";
 import AppShell from "@/layouts/AppShell";
@@ -12,24 +12,20 @@ import {
 } from "@/services/movements";
 import type { BalanceSeries, ExpensesByCategory } from "@/types/movement";
 
+import DateTimelineFilter, { PresetKey, rangeForPreset } from "@/components/DateTimelineFilter";
+
 // ===== Helpers
 const fmtMoney = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 const monthLabel = (y: number, m: number) =>
   new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("es-AR", { year: "numeric", month: "long" });
 
-// últimos 6 meses hasta (y, m) inclusive
-function last6MonthsRange(y: number, m1to12: number) {
-  const start = new Date(Date.UTC(y, m1to12 - 6, 1)); // 6 meses atrás (OK si es negativo, Date lo normaliza)
-  const end = new Date(Date.UTC(y, m1to12, 1));       // primer día del mes siguiente
-  return { from: start.toISOString(), to: end.toISOString() };
-}
-
 // ===== Página
 export default function Dashboard() {
   const nav = useNavigate();
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1); // 1..12
+
+  // timeline (por defecto: últimos 6 meses)
+  const [preset, setPreset] = useState<PresetKey>("last180");
+  const [{ from, to }, setRange] = useState(() => rangeForPreset("last180"));
 
   // data
   const [summary, setSummary] = useState<{ ingresos: number; gastos: number; balance: number } | null>(null);
@@ -39,10 +35,19 @@ export default function Dashboard() {
   // loading
   const [loading, setLoading] = useState(true);
 
+  function onPresetChange(p: PresetKey, r: { from: string; to: string }) {
+    setPreset(p);
+    setRange(r);
+  }
+
   async function fetchAll() {
     setLoading(true);
     try {
-      const [{ from, to }] = [last6MonthsRange(year, month)];
+      // para la torta usamos el mes del límite superior (to)
+      const toDate = new Date(to);
+      const year = toDate.getFullYear();
+      const month = toDate.getMonth() + 1;
+
       const [s, b, p] = await Promise.all([
         getSummary(),
         getBalanceSeries({ from, to }),
@@ -59,10 +64,12 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => {
-    fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month]);
+  useEffect(() => { fetchAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [from, to]);
+
+  // etiquetas auxiliares
+  const toDate = new Date(to);
+  const y = toDate.getFullYear();
+  const m = toDate.getMonth() + 1;
 
   return (
     <AppShell
@@ -77,26 +84,6 @@ export default function Dashboard() {
       subtitle="Resumen de balances, movimientos y metas en un solo lugar."
       actions={
         <div className="flex items-center gap-2">
-          {/* Filtros mes/año */}
-          <select
-            className="rounded-xl border border-slate-700/70 bg-slate-900/40 px-3 py-2 text-sm"
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-          >
-            {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          <select
-            className="rounded-xl border border-slate-700/70 bg-slate-900/40 px-3 py-2 text-sm"
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-          >
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-              <option key={m} value={m}>{m.toString().padStart(2, "0")}</option>
-            ))}
-          </select>
-
           <button
             onClick={() => nav("/transacciones")}
             className="rounded-xl border border-slate-700/80 bg-slate-900/40 px-4 py-2 text-sm text-slate-200 backdrop-blur transition hover:bg-slate-900/60"
@@ -106,11 +93,20 @@ export default function Dashboard() {
         </div>
       }
     >
+      {/* Timeline de rango */}
+      <div className="mb-4 rounded-xl border border-slate-700/60 bg-slate-900/40 p-3">
+        <label className="mb-2 block text-xs text-slate-400">Rango de fechas</label>
+        <DateTimelineFilter value={preset} onChange={onPresetChange} />
+        <p className="mt-2 text-xs text-slate-500">
+          Mostrando <b>{from}</b> → <b>{to}</b>
+        </p>
+      </div>
+
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <div className="flex items-center justify-between">
-            <Stat label="Balance" value={summary ? fmtMoney.format(summary.balance) : "—"} hint={monthLabel(year, month)} />
+            <Stat label="Balance" value={summary ? fmtMoney.format(summary.balance) : "—"} hint={`Hasta ${monthLabel(y, m)}`} />
             <span className="grid h-10 w-10 place-content-center rounded-xl bg-emerald-500/10 text-emerald-300">
               <Wallet className="h-5 w-5" />
             </span>
@@ -125,7 +121,7 @@ export default function Dashboard() {
                   {summary ? fmtMoney.format(summary.ingresos) : "—"} <ArrowUpRight className="h-4 w-4" />
                 </div>
               }
-              hint={monthLabel(year, month)}
+              hint={`Hasta ${monthLabel(y, m)}`}
             />
             <span className="grid h-10 w-10 place-content-center rounded-xl bg-emerald-500/10 text-emerald-300">
               <PiggyBank className="h-5 w-5" />
@@ -141,7 +137,7 @@ export default function Dashboard() {
                   {summary ? fmtMoney.format(summary.gastos) : "—"} <ArrowDownRight className="h-4 w-4" />
                 </div>
               }
-              hint={monthLabel(year, month)}
+              hint={`Hasta ${monthLabel(y, m)}`}
             />
             <span className="grid h-10 w-10 place-content-center rounded-xl bg-emerald-500/10 text-emerald-300">
               <LineIcon className="h-5 w-5" />
@@ -150,7 +146,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <div className="flex items-center justify-between">
-            <Stat label="Periodo" value="Últimos 6 meses" hint="Serie de balance" />
+            <Stat label="Periodo" value="Según timeline" hint={`${from} → ${to}`} />
             <span className="grid h-10 w-10 place-content-center rounded-xl bg-emerald-500/10 text-emerald-300">
               <LineIcon className="h-5 w-5" />
             </span>
@@ -163,7 +159,7 @@ export default function Dashboard() {
         <Card className="lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm text-slate-300">Evolución de balance</div>
-            <div className="text-xs text-slate-400">Últimos 6 meses</div>
+            <div className="text-xs text-slate-400">{from} → {to}</div>
           </div>
           <div className="h-40">
             {loading ? (
@@ -177,7 +173,7 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <div className="mb-3 text-sm text-slate-300">Gastos por categoría ({monthLabel(year, month)})</div>
+          <div className="mb-3 text-sm text-slate-300">Gastos por categoría ({monthLabel(y, m)})</div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex items-center justify-center">
               {loading ? (
@@ -293,4 +289,3 @@ function sliceColor(i: number) {
   ];
   return colors[i % colors.length];
 }
-

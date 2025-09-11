@@ -9,6 +9,8 @@ import {
 import type { Movement, MovementType } from "@/types/movement";
 import { motion } from "framer-motion";
 
+import DateTimelineFilter, { PresetKey, rangeForPreset } from "@/components/DateTimelineFilter";
+
 // Helpers
 const fmtMoney = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("es-AR");
@@ -30,21 +32,20 @@ const DEFAULT_CATEGORIES = [
   "Otros"
 ];
 
-// Fecha por defecto: mes actual
-function monthRange(year: number, month1to12: number) {
-  const start = new Date(Date.UTC(year, month1to12 - 1, 1));
-  const end = new Date(Date.UTC(year, month1to12, 1));
-  return { from: start.toISOString(), to: end.toISOString() };
-}
-
 export default function Transactions() {
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1); // 1..12
   const [type, setType] = useState<"" | MovementType>("");
   const [category, setCategory] = useState(""); // filtro
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
+
+  // timeline (por defecto: último mes)
+  const [preset, setPreset] = useState<PresetKey>("last30");
+  const [{ from, to }, setRange] = useState(() => rangeForPreset("last30"));
+  function onPresetChange(p: PresetKey, r: { from: string; to: string }) {
+    setPreset(p);
+    setRange(r);
+    setPage(1);
+  }
 
   const [data, setData] = useState<Movement[]>([]);
   const [total, setTotal] = useState(0);
@@ -67,7 +68,6 @@ export default function Transactions() {
   async function fetchList() {
     setLoading(true);
     try {
-      const { from, to } = monthRange(year, month);
       const res = await listMovements({
         from, to,
         type: type || undefined,
@@ -87,7 +87,7 @@ export default function Transactions() {
   useEffect(() => {
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, type, category, page, limit]);
+  }, [from, to, type, category, page, limit]);
 
   function openCreate() {
     setEditing(null);
@@ -162,24 +162,12 @@ export default function Transactions() {
     >
       {/* Filtros */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-3">
-          <label className="block text-xs text-slate-400 mb-1">Año</label>
-          <select className="w-full rounded-lg bg-slate-950/60 p-2" value={year}
-            onChange={e => { setPage(1); setYear(Number(e.target.value)); }}>
-            {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y =>
-              <option key={y} value={y}>{y}</option>
-            )}
-          </select>
+        <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-3 lg:col-span-3">
+          <label className="block text-xs text-slate-400 mb-1">Rango de fechas</label>
+          <DateTimelineFilter value={preset} onChange={onPresetChange} />
+          <div className="mt-2 text-xs text-slate-500">{from} → {to}</div>
         </div>
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-3">
-          <label className="block text-xs text-slate-400 mb-1">Mes</label>
-          <select className="w-full rounded-lg bg-slate-950/60 p-2" value={month}
-            onChange={e => { setPage(1); setMonth(Number(e.target.value)); }}>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m =>
-              <option key={m} value={m}>{m.toString().padStart(2, "0")}</option>
-            )}
-          </select>
-        </div>
+
         <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-3">
           <label className="block text-xs text-slate-400 mb-1">Tipo</label>
           <select className="w-full rounded-lg bg-slate-950/60 p-2" value={type}
@@ -191,7 +179,7 @@ export default function Transactions() {
         </div>
 
         {/* Filtro: Categoría como desplegable */}
-        <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-3 lg:col-span-2">
+        <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-3">
           <label className="block text-xs text-slate-400 mb-1">Categoría</label>
           <select
             className="w-full rounded-lg bg-slate-950/60 p-2"
@@ -317,7 +305,6 @@ export default function Transactions() {
                   }
                   className="w-full rounded-lg bg-slate-950/60 p-2"
                   onChange={(e) => {
-                    // Si elige "Otra…" mostramos el input extra (mediante CSS, lo manejamos con required condicional en submit)
                     const wrap = e.currentTarget.closest("form")!;
                     const custom = wrap.querySelector<HTMLInputElement>('input[name="categoryCustom"]');
                     if (!custom) return;
@@ -375,5 +362,3 @@ export default function Transactions() {
     </AppShell>
   );
 }
-
-
