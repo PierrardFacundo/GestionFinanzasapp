@@ -1,13 +1,13 @@
 # Build
-FROM node:20-alpine AS build
+FROM --platform=linux/amd64 node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build   # genera /dist
+RUN npm run build
 
 # Serve estático
-FROM nginx:alpine
+FROM --platform=linux/amd64 nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

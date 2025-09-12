@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   mongo:
     image: mongo:6
@@ -7,6 +6,7 @@ services:
       - mongo_data:/data/db
 
   backend:
+    platform: "linux/amd64"   # 👈 acá
     build: ./backend
     env_file:
       - ./backend/.env
@@ -17,6 +17,7 @@ services:
     restart: unless-stopped
 
   frontend:
+    platform: "linux/amd64"   # 👈 y acá
     build: ./frontend
     depends_on:
       - backend
