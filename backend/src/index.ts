@@ -3,7 +3,6 @@ import express from "express";
 import cors from "cors";
 import { connectMongo } from "./lib/mongo";
 
-// 👇 nuevas rutas
 import movements from "./routes/movements";
 import stats from "./routes/stats";
 
@@ -15,26 +14,23 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Healthcheck
-app.get("/health", (_req, res) =>
-  res.json({ ok: true, service: "backend", env: process.env.NODE_ENV || "dev" })
-);
-
-// 👇 monta API
+// ⬇️ Montar base /api, que es lo que espera tu frontend
 app.use("/api/movements", movements);
 app.use("/api/stats", stats);
+
+// ⬇️ Healthcheck
+app.get("/health", (_req, res) => {
+  res.json({ ok: true, time: new Date().toISOString() });
+});
 
 const PORT = Number(process.env.PORT || 4000);
 
 async function main() {
   await connectMongo(process.env.MONGO_URI || "");
-  app.listen(PORT, () => {
-    console.log(`API escuchando en http://localhost:${PORT}`);
-  });
+  console.log("MongoDB conectado");
+  app.listen(PORT, () => console.log(`API escuchando en http://localhost:${PORT}`));
 }
-
-main().catch((err) => {
+main().catch(err => {
   console.error("Fallo al iniciar:", err);
   process.exit(1);
 });
-
